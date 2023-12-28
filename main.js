@@ -1,24 +1,63 @@
 import './style.css'
-import javascriptLogo from './javascript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.js'
+import { ethers } from 'ethers';
+import axios from 'axios';
 
 document.querySelector('#app').innerHTML = `
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-      <img src="${javascriptLogo}" class="logo vanilla" alt="JavaScript logo" />
-    </a>
-    <h1>Hello Vite!</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite logo to learn more
-    </p>
-  </div>
+<div>
+    <h1 class="text-2xl font-bold mb-4">Fetch Token Image</h1>
+    <form id="tokenForm" class="p-6 flex flex-col gap-4 w-full max-w-md mx-auto">
+        <input type="text" id="contractAddress" placeholder="Contract Address" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <input type="text" id="tokenId" placeholder="Token ID" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <input type="text" id="chainId" placeholder="Chain ID (default 1)" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <button onclick="fetchTokenImage(event)" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Fetch Image</button>
+    </form>
+    <div class="flex justify-center items-center" id="imageContainer"></div>
+</div>
 `
 
-setupCounter(document.querySelector('#counter'))
+window.fetchTokenImage = async (event) => {
+    event.preventDefault();
+    try {
+        const contractAddress = document.getElementById('contractAddress').value;
+        const tokenId = document.getElementById('tokenId').value;
+        const chainId = document.getElementById('chainId').value || 1;
+        console.log(`fart`);
+        if (!window.ethereum) {
+            throw new Error('Ethereum provider not found');
+        }
+
+        console.log(`butt`);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (!window.ethereum) {
+            console.error('Please use an Ethereum-enabled browser or enable the Ethereum extension.');
+            return;
+        }
+        window.ethers = ethers;
+        console.log({
+            ethers,
+            providers: ethers.providers,
+            ethereum: window.ethereum,
+        })
+        const provider = new ethers.BrowserProvider(window.ethereum);
+
+        console.log(`contractAddress: ${contractAddress}\ntokenId: ${tokenId}\nchainId: ${chainId}\nprovider: ${provider}`);
+        const contract = new ethers.Contract(contractAddress, ['function tokenURI(uint256 tokenId) view returns (string)'], provider);
+
+        const tokenURI = await contract.tokenURI(parseInt(tokenId));
+        console.log(`Token URI: ${tokenURI}`);
+
+        const metadataResponse = await axios.get(tokenURI);
+        const metadata = metadataResponse.data;
+        console.log(`Metadata: `, metadata);
+
+        const imageURI = metadata.image || metadata.image_url;
+        if (!imageURI) {
+            throw new Error('Image URI not found in metadata');
+        }
+
+        const imageContainer = document.getElementById('imageContainer');
+        imageContainer.innerHTML = `<img src="${imageURI}" class="w-1/3 mx-auto" alt="Token Image">`;
+    } catch (error) {
+        console.error(`Error fetching token image: ${error.message}`);
+    }
+}
