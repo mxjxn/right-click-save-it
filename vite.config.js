@@ -1,4 +1,4 @@
 // vite.config.js
 export default {
-  base: '/your-repo-name/'
+  base: '/right-click-save-it/'
 }
